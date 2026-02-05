@@ -1,0 +1,129 @@
+services:
+  # ============================================
+  # BASE BACKEND SERVICE (Template)
+  # ============================================
+  app-backend:
+    profiles: ["_base"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${DOCKER_TARGET:-development}
+    image: secure-mailer-service:${VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      # Database (Para Logs de auditoria de correos)
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-mailer_db}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-securepass}
+      # Redis (Para BullMQ - Colas de Correo)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Security & App
+      API_KEY_SECRET: ${API_KEY_SECRET} # Clave compartida con Laravel
+      # SMTP Configuration (Provider)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM:-"Soporte <no-reply@miempresa.com>"}
+    networks:
+      - secure_mail_network
+    logging: &default-logging
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # DEVELOPMENT PROFILE (Lo que correremos hoy)
+  # ============================================
+  app-dev:
+    extends: app-backend
+    profiles: ["dev"]
+    build:
+      target: development
+    command: npm run start:dev
+    environment:
+      NODE_ENV: development
+    ports:
+      - "${APP_PORT:-3001}:3000" # Mapeado al 3001 para no chocar con otros
+    volumes:
+      - ./src:/usr/src/app/src:delegated
+      - ./test:/usr/src/app/test:delegated
+      - ./templates:/usr/src/app/templates:delegated # Montamos templates para editar en caliente
+      - /usr/src/app/node_modules
+    stdin_open: true
+    tty: true
+
+  # ============================================
+  # PRODUCTION PROFILE
+  # ============================================
+  app-prod:
+    extends: app-backend
+    profiles: ["prod"]
+    build:
+      target: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    volumes:
+      - ./logs:/usr/src/app/logs
+
+  # ============================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    profiles: ["dev", "prod"] # Necesario en ambos
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mailer_db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepass}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - secure_mail_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-mailer_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: ["dev", "prod"] # CRÍTICO: Necesario siempre para las colas
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - secure_mail_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  secure_mail_network:
+    driver: bridge
