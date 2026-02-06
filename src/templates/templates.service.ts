@@ -11,15 +11,30 @@ export class TemplatesService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const count = await this.templateRepository.count();
-    if (count === 0) {
-      await this.templateRepository.save({
+    const templates = [
+      {
         slug: 'password_recovery',
         name: 'Recuperación de Clave',
         filename: 'password-recovery',
         subject: 'Restablece tu contraseña',
         isActive: true,
+      },
+      {
+        slug: 'welcome',
+        name: 'Bienvenida a la Plataforma',
+        filename: 'welcome',
+        subject: '¡Te damos la bienvenida!',
+        isActive: true,
+      },
+    ];
+
+    for (const template of templates) {
+      const exists = await this.templateRepository.findOne({
+        where: { slug: template.slug },
       });
+      if (!exists) {
+        await this.templateRepository.save(template);
+      }
     }
   }
 

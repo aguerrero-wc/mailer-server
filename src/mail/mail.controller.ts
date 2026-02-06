@@ -1,17 +1,17 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { MailService } from './mail.service';
-import { SendRecoveryDto } from './dto/send-recovery.dto';
+import { SendEmailDto } from './dto/send-email.dto';
 
 @Controller('mail')
 export class MailController {
   constructor(private readonly mailService: MailService) {}
 
-  @Post('recovery')
-  async sendRecoveryEmail(@Body() dto: SendRecoveryDto) {
-    await this.mailService.sendPasswordRecovery(dto);
+  @Post('send')
+  async sendEmail(@Body() dto: SendEmailDto) {
+    await this.mailService.sendEmail(dto);
     return {
       success: true,
-      message: `Email de recuperación enviado a ${dto.email}`,
+      message: `Email enviado a ${dto.to}`,
     };
   }
 }
