@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { SecurityLoggerService } from './logging/services/security-logger.service';
+import { SecurityExceptionFilter } from './common/filters/security-exception.filter';
 
 process.on('uncaughtException', (error: Error & { code?: string }) => {
   const logger = new Logger('TLS-ErrorHandler');
@@ -22,6 +24,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  const securityLogger = app.get(SecurityLoggerService);
+  app.useGlobalFilters(new SecurityExceptionFilter(securityLogger));
 
   await app.listen(process.env.PORT ?? 3000);
 }
