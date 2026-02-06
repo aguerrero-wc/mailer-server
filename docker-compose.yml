@@ -35,6 +35,7 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM:-"Soporte <no-reply@miempresa.com>"}
+      API_KEY_PRIVATE_ZONES: ${API_KEY_PRIVATE_ZONES}
     networks:
       - secure_mail_network
     logging: &default-logging
