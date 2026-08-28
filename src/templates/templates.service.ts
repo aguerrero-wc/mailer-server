@@ -26,16 +26,25 @@ export class TemplatesService implements OnModuleInit {
         subject: '¡Te damos la bienvenida!',
         isActive: true,
       },
+      {
+        slug: 'group_welcome',
+        name: 'Bienvenida a Grupo',
+        filename: 'group-welcome',
+        subject: '¡Bienvenido al grupo!',
+        isActive: true,
+      },     
+
+      {
+        slug: 'group_welcome_multiple',
+        name: 'Bienvenida a Varios Grupos',
+        filename: 'group-welcome-multiple',
+        subject: '¡Bienvenido a tus nuevos grupos!',
+        isActive: true,
+      },
+     
     ];
 
-    for (const template of templates) {
-      const exists = await this.templateRepository.findOne({
-        where: { slug: template.slug },
-      });
-      if (!exists) {
-        await this.templateRepository.save(template);
-      }
-    }
+    await this.templateRepository.upsert(templates, ['slug']);
   }
 
   async findBySlug(slug: string): Promise<Template | null> {
