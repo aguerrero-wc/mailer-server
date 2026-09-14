@@ -32,11 +32,42 @@ export class MailProcessor extends WorkerHost {
     }
 
     try {
+      const rawCredentials = dto.data?.credentials || {
+        username: dto.data?.username || null,
+        password: dto.data?.password || null,
+      };
+
+      const context =
+        dto.template === 'group_welcome_multiple' ||
+        dto.template === 'group_welcome'
+          ? {
+              name: dto.data?.name || 'Usuario',
+              institution: dto.data?.institution || 'UPB',
+              addedGroups: Array.isArray(dto.data?.addedGroups)
+                ? dto.data.addedGroups
+                : [],
+              platformUrl:
+                dto.data?.platformUrl ||
+                'https://formacionvirtual.clinicaupb.org.co/',
+              instructionUrl: dto.data?.instructionUrl || null,
+              supportEmail: dto.data?.supportEmail || null,
+              dataEmail: dto.data?.dataEmail || null,
+              siteUrl:
+                dto.data?.siteUrl ||
+                dto.data?.platformUrl ||
+                'https://formacionvirtual.clinicaupb.org.co/',
+              credentials: {
+                username: rawCredentials?.username || null,
+                password: rawCredentials?.password || null,
+              },
+            }
+          : dto.data || {};
+
       const result = await this.mailerService.sendMail({
         to: dto.to,
         subject: template.subject,
         template: `./${template.filename}`,
-        context: dto.data || {},
+        context,
       });
 
       await this.emailLogRepository.save({

@@ -13,6 +13,8 @@ export class MailService {
   ) {}
 
   async queueEmail(dto: SendEmailDto): Promise<{ jobId: string }> {
+    
+    
     const template = await this.templatesService.findBySlug(dto.template);
     if (!template) {
       throw new NotFoundException('Template not found');

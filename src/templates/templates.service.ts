@@ -30,7 +30,7 @@ export class TemplatesService implements OnModuleInit {
         slug: 'group_welcome',
         name: 'Bienvenida a Grupo',
         filename: 'group-welcome',
-        subject: '¡Bienvenido al grupo!',
+        subject: 'Nueva experiencia formativa',
         isActive: true,
       },     
 
@@ -38,7 +38,7 @@ export class TemplatesService implements OnModuleInit {
         slug: 'group_welcome_multiple',
         name: 'Bienvenida a Varios Grupos',
         filename: 'group-welcome-multiple',
-        subject: '¡Bienvenido a tus nuevos grupos!',
+        subject: 'Nueva experiencia formativa',
         isActive: true,
       },
      

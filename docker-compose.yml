@@ -17,7 +17,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3000
+      # PORT: 3000
       # Database (Para Logs de auditoria de correos)
       DB_HOST: postgres
       DB_PORT: 5432

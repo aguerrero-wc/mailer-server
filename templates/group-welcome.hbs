@@ -1,77 +1,180 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenido al grupo</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Nueva experiencia formativa</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f2f3f5; -webkit-text-size-adjust: 100%; }
+    table { border-collapse: collapse; }
+    img { border: 0; display: block; }
+    a { text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 22px !important; padding-right: 22px !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f7; padding: 40px 0;">
+<body style="margin: 0; padding: 0; background-color: #f2f3f5;">
+
+  <!-- Preheader -->
+  <div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #f2f3f5;">
+    Tienes una nueva experiencia formativa asignada. Ingresa a la plataforma virtual de aprendizaje.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f2f3f5;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);">
-          <!-- Header -->
+      <td align="center" style="padding: 24px 12px;">
+
+        <!-- Contenedor -->
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width: 600px; max-width: 600px; background-color: #ffffff; border-radius: 14px; overflow: hidden; font-family: Arial, Helvetica, sans-serif;">
+
+          <!-- Encabezado / institución -->
           <tr>
-            <td style="background-color: #f89003; padding: 44px 40px; text-align: center;">
-              <div style="font-size: 40px; line-height: 1; margin: 0 0 12px;"></div>
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 0.2px;">¡Bienvenido al grupo!</h1>
+            <td align="center" style="padding: 28px 24px 22px 24px; border-bottom: 1px solid #eceded;">
+              <div style="width: 48px; height: 48px; background-color: #e6f1fb; border-radius: 10px; display: inline-block; text-align: center; line-height: 48px;">
+                <span style="font-size: 24px; color: #185fa5;">&#127891;</span>
+              </div>
+              <div style="font-size: 12px; letter-spacing: 0.6px; color: #8a8d91; margin-top: 10px;">{{institution}}</div>
+              <div style="font-size: 20px; font-weight: bold; color: #1c1c1a; margin-top: 6px;">Nueva experiencia formativa</div>
             </td>
           </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding: 40px 44px 32px;">
-              <p style="color: #2b2b2b; font-size: 18px; line-height: 1.6; margin: 0 0 22px;">
-                ¡Hola <strong>{{name}}</strong>!
-              </p>
-              <p style="color: #555555; font-size: 16px; line-height: 1.7; margin: 0 0 22px;">
-                Bienvenido al nuevo grupo. Estamos felices de que estés aquí.
-              </p>
-              <p style="color: #555555; font-size: 16px; line-height: 1.7; margin: 0 0 32px;">
-                A partir de ahora podrás disfrutar de todos nuestros servicios. Si tienes alguna pregunta, no dudes en contactarnos.
-              </p>
 
-              <!-- Grupos agregados -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 28px 0 4px;">
+          <!-- Cuerpo -->
+          <tr>
+            <td class="px" style="padding: 24px 30px 8px 30px; font-size: 15px; line-height: 1.7; color: #2c2c2a;">
+              <p style="margin: 0 0 16px 0;">Buen d&iacute;a apreciado(a) <strong>{{name}}</strong>,</p>
+
+              <p style="margin: 0 0 18px 0;">
+                {{institution}} cuenta con un Programa de Formaci&oacute;n Institucional que responde a la ruta
+                de cualificaci&oacute;n de cada participante. Le invitamos a ingresar a la plataforma virtual de
+                aprendizaje, donde encontrar&aacute; el contenido que debe realizar.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Contenido asignado: un grupo -->
+          <tr>
+            <td class="px" style="padding: 0 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7f8f9; border-radius: 12px;">
                 <tr>
-                  <td style="background-color: #fff6e9; border-left: 4px solid #f89003; border-radius: 6px; padding: 20px 24px;">
-                    <p style="color: #f89003; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">
-                      grupo agregado
-                    </p>
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <td style="padding: 16px 20px;">
+                    <div style="font-size: 11px; letter-spacing: 0.5px; color: #8a8d91; margin-bottom: 12px;">CONTENIDO ASIGNADO</div>
+
+                    {{#if addedGroups}}
                       {{#each addedGroups}}
-                      <tr>
-                        <td style="padding: 5px 0; color: #333333; font-size: 15px; line-height: 1.5;">
-                          <span style="color: #f89003; font-weight: 700;">&#8226;</span>&nbsp; {{this}}
-                        </td>
-                      </tr>
+                        <div style="font-size: 15px; font-weight: bold; color: #1c1c1a; padding: 8px 0; border-bottom: 1px solid #e6e7e8;">
+                          &#8226;&nbsp; {{this}}
+                        </div>
                       {{/each}}
-                    </table>
+                    {{else}}
+                      <div style="font-size: 15px; color: #5f5e5a; padding: 8px 0;">
+                        Contenido formativo asignado.
+                      </div>
+                    {{/if}}
                   </td>
                 </tr>
               </table>
-
-          
-              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 8px 0 24px;">
-                            <p style="color: #999999; font-size: 14px; line-height: 1.5; margin: 0; text-align: center;">
-                ¡Gracias por confiar en nosotros! 🧡
-              </p>
-              <p style="color: #b5b5b5; font-size: 12px; line-height: 1.5; margin: 14px 0 0; text-align: center;">
-                Apoyado por
-                <a href="https://windowschannel.com/" style="color: #f89003; text-decoration: none; font-weight: 600;">Windows Channel</a>
-              </p>
             </td>
           </tr>
-          <!-- Footer -->
+
+          <!-- Datos de acceso para usuarios creados durante la importación -->
+          {{#if credentials.password}}
+            <tr>
+              <td class="px" style="padding: 18px 30px 0 30px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fff8e8; border: 1px solid #f0dfb1; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 16px 20px; font-family: Arial, Helvetica, sans-serif;">
+                      <div style="font-size: 11px; letter-spacing: 0.5px; color: #8a6d1d; margin-bottom: 10px;">DATOS DE ACCESO</div>
+                      <div style="font-size: 14px; line-height: 1.7; color: #2c2c2a;">
+                        <strong>Usuario:</strong> {{credentials.username}}<br>
+                        <strong>Contrase&ntilde;a:</strong> {{credentials.password}}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          {{/if}}
+
+          <!-- Botón -->
           <tr>
-            <td style="background-color: #fafafa; padding: 24px 40px; text-align: center;">
-              <p style="color: #aaaaaa; font-size: 12px; margin: 0;">
-                Este es un correo automático, por favor no respondas a este mensaje.
+            <td align="center" style="padding: 22px 30px 18px 30px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="background-color: #378ADD; border-radius: 8px;">
+                    <a href="{{platformUrl}}" target="_blank" style="display: inline-block; padding: 13px 34px; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: bold; color: #ffffff;">
+                      Ingresar a la plataforma
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Instructivo opcional -->
+          {{#if instructionUrl}}
+            <tr>
+              <td class="px" style="padding: 0 30px 20px 30px;">
+                <a href="{{instructionUrl}}" target="_blank" style="text-decoration: none;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #eceded; border-radius: 12px;">
+                    <tr>
+                      <td width="58" style="padding: 12px;">
+                        <div style="width: 46px; height: 46px; background-color: #e6f1fb; border-radius: 8px; text-align: center; line-height: 46px;">
+                          <span style="font-size: 20px; color: #185fa5;">&#9658;</span>
+                        </div>
+                      </td>
+                      <td style="padding: 12px 12px 12px 0; font-family: Arial, Helvetica, sans-serif;">
+                        <div style="font-size: 14px; font-weight: bold; color: #1c1c1a;">Instructivo de navegaci&oacute;n</div>
+                        <div style="font-size: 13px; color: #8a8d91; margin-top: 2px;">Ver video</div>
+                      </td>
+                    </tr>
+                  </table>
+                </a>
+              </td>
+            </tr>
+          {{/if}}
+
+          <!-- Cierre -->
+          <tr>
+            <td class="px" style="padding: 0 30px 24px 30px; font-size: 15px; line-height: 1.7; color: #2c2c2a;">
+              <p style="margin: 0 0 16px 0;">
+                Su participaci&oacute;n es muy importante para su desarrollo. Si tiene dudas, escr&iacute;banos
+                {{#if supportEmail}}
+                  a <a href="mailto:{{supportEmail}}" style="color: #185fa5; text-decoration: underline;">{{supportEmail}}</a>.
+                {{else}}
+                  al equipo encargado de su formaci&oacute;n.
+                {{/if}}
+              </p>
+              <p style="margin: 0; font-weight: bold; color: #1c1c1a;">&iexcl;Contamos con su compromiso!</p>
+            </td>
+          </tr>
+
+          <!-- Aviso de confidencialidad -->
+          <tr>
+            <td style="padding: 16px 30px; background-color: #f7f8f9; border-top: 1px solid #eceded;">
+              <p style="margin: 0; font-size: 10px; line-height: 1.6; color: #9a9da1;">
+                <strong style="color: #5f5e5a;">AVISO DE CONFIDENCIALIDAD:</strong>
+                Este mensaje de correo electr&oacute;nico contiene informaci&oacute;n privilegiada y confidencial; si usted no es el destinatario real del mismo,
+                elim&iacute;nelo de manera inmediata e inf&oacute;rmenos de esta inconsistencia
+                {{#if dataEmail}}
+                  al correo <a href="mailto:{{dataEmail}}" style="color: #9a9da1; text-decoration: underline;">{{dataEmail}}</a>.
+                {{else}}
+                  al equipo encargado de la protecci&oacute;n de datos.
+                {{/if}}
+                Para ver m&aacute;s sobre nuestras pol&iacute;ticas de protecci&oacute;n de datos personales visite
+                <a href="{{siteUrl}}" style="color: #9a9da1; text-decoration: underline;">{{siteUrl}}</a>.
               </p>
             </td>
           </tr>
         </table>
+
+        <div style="font-size: 11px; color: #b4b2a9; margin-top: 16px; font-family: Arial, Helvetica, sans-serif;">
+          {{institution}} &middot; Programa de Formaci&oacute;n Institucional
+        </div>
       </td>
     </tr>
   </table>
 </body>
-<!-- </html> -->
+</html>
