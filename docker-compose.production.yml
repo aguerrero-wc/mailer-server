@@ -1,0 +1,113 @@
+# Producción: docker compose --env-file .env.production -f docker-compose.production.yml up --build -d
+# Archivo independiente: no combinar con docker-compose.yml.
+services:
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: secure-mailer-service:${VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000 # Puerto interno del contenedor, no expuesto al host. 
+      NODE_OPTIONS: --max-old-space-size=384
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-mailer_db}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env.production}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      API_KEY_SECRET: ${API_KEY_SECRET:?Define API_KEY_SECRET en .env.production}
+      API_KEY_PRIVATE_ZONES: ${API_KEY_PRIVATE_ZONES:?Define API_KEY_PRIVATE_ZONES en .env.production}
+      SMTP_HOST: ${SMTP_HOST:?Define SMTP_HOST en .env.production}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?Define SMTP_USER en .env.production}
+      SMTP_PASS: ${SMTP_PASS:?Define SMTP_PASS en .env.production}
+      SMTP_FROM: ${SMTP_FROM:-Soporte <no-reply@miempresa.com>}
+    expose:
+      - "3000"
+    volumes:
+      - ./logs:/usr/src/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - secure_mail_network
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    depends_on:
+      app-prod:
+        condition: service_healthy
+    ports:
+      - "${NGINX_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+    networks:
+      - secure_mail_network
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mailer_db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env.production}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - secure_mail_network
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # BullMQ requiere persistir los trabajos pendientes, sin políticas de expulsión de caché.
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    networks:
+      - secure_mail_network
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# Sin name, external ni prefijos nuevos: conservar el nombre de proyecto usado en producción.
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  secure_mail_network:
+    driver: bridge

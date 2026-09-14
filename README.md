@@ -1,98 +1,98 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Mailer Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Servicio NestJS para envío de correos con plantillas Handlebars, colas BullMQ en Redis y registros de auditoría en PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Desarrollo
 
-## Description
+`docker-compose.yml` es independiente y usa `.env`. Levanta `app-dev`, PostgreSQL 15 y Redis 7 sin perfiles. El código y las plantillas se montan para recarga en caliente.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+Crear `.env` desde `.env.example` si todavía no existe y completar SMTP y las claves de API. Si ya existe, conservar sus valores y añadir las variables que falten. `API_KEY_PRIVATE_ZONES` es la clave que valida el guard de la aplicación.
 
 ```bash
-$ npm install
+docker compose --env-file .env -f docker-compose.yml config --quiet
+docker compose --env-file .env -f docker-compose.yml up -d --build
+docker compose --env-file .env -f docker-compose.yml logs -f app-dev
 ```
 
-## Compile and run the project
+La API se publica en `http://localhost:3001` por defecto. `APP_PORT`, `DB_PORT` y `REDIS_PORT` controlan los puertos del host; dentro de Docker la aplicación siempre conecta a `postgres:5432` y `redis:6379`.
+
+Si desarrollo y producción comparten el mismo host Docker, definir `COMPOSE_PROJECT_NAME=mailer-service-dev` **solo en el `.env` de desarrollo** para separar sus contenedores y datos. Esto crea volúmenes propios para desarrollo; producción debe conservar su nombre de proyecto anterior.
+
+## Producción
+
+`docker-compose.production.yml` es independiente y usa `.env.production`. Levanta Nginx, `app-prod`, PostgreSQL y Redis sin perfiles ni archivos Compose superpuestos.
+
+Crear `.env.production` desde `.env.production.example` si no existe y completar las credenciales reales del servidor. El archivo local generado inicialmente es una plantilla sin credenciales. Ambos archivos de credenciales están excluidos de Git y del contexto de construcción de Docker.
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build --wait
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f app-prod
 ```
 
-## Run tests
+Usar siempre `--env-file .env.production`: este parámetro selecciona las variables que Compose interpola; omitirlo cargaría `.env`. Las variables exportadas en la terminal tienen precedencia, por lo que hay que revisar cualquier valor exportado antes de desplegar. [Documentación de Docker](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/).
+
+Solo Nginx publica un puerto: `0.0.0.0:3001` hacia su puerto interno `80`. `NGINX_HTTP_PORT` y `NGINX_BIND_ADDRESS` permiten cambiarlo. Nest escucha en `app-prod:3000` dentro de `secure_mail_network`; Nest, PostgreSQL y Redis no publican puertos del host.
+
+### Nginx y Nginx Proxy Manager
+
+El flujo es **cliente → Nginx Proxy Manager (HTTPS) → Nginx (HTTP) → app-prod:3000**. En NPM configurar el Proxy Host con esquema `http`, la IP del servidor Docker como destino y el puerto `3001` (o `NGINX_HTTP_PORT`). Si NPM corre en otro contenedor, `127.0.0.1` apunta al propio contenedor de NPM; usar una dirección del servidor alcanzable desde él. TLS y certificados se gestionan en NPM.
+
+La configuración está en `nginx/nginx.conf`. La imagen oficial la procesa como plantilla al iniciar y sustituye únicamente `NGINX_TRUSTED_PROXY_CIDR`, conservando las variables nativas de Nginx. Incluye gzip, conexiones persistentes, límite de 10 peticiones/s por IP con ráfaga de 20 y respuesta `429`, y `/health` para comprobar Nginx. El límite de cuerpo de 10 MB aplica en Nginx; los límites del parser de Nest siguen aplicando. Docker resuelve `app-prod` periódicamente para seguir funcionando cuando el backend cambia de IP.
+
+Definir `NGINX_TRUSTED_PROXY_CIDR` en `.env.production` con la IP/CIDR desde la que Nginx ve llegar a NPM. Preferir la IP concreta del proxy. El valor inicial `127.0.0.1/32` solo confía en loopback: hasta configurar NPM, los logs y el rate limit usarán la IP del proxy, y el esquema reenviado será `http`. No copiar `172.20.0.0/16` de otro proyecto sin verificar la red real. Nginx acepta `X-Forwarded-For` y `X-Forwarded-Proto` solo del proxy configurado y envía a Nest la IP validada. [Módulo Real IP de Nginx](https://nginx.org/en/docs/http/ngx_http_realip_module.html).
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose --env-file .env.production -f docker-compose.production.yml exec nginx nginx -t
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f nginx
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Después de modificar `nginx/nginx.conf` o las variables de Nginx, recrear su contenedor para procesar de nuevo la plantilla:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --force-recreate --no-deps nginx
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+La imagen incluye las plantillas, ejecuta Node como usuario sin privilegios y comprueba `GET /` como señal de vida del proceso HTTP. El healthcheck no verifica SMTP ni el procesamiento de las colas. Se conserva el límite de 1 CPU y 512 MB, con un heap de Node de 384 MB, y el montaje `./logs:/usr/src/app/logs`. Redis mantiene AOF y usa `noeviction` para las colas. Los logs de contenedores rotan a 10 MB con tres archivos.
 
-## Resources
+## Actualizar el despliegue existente sin cambiar volúmenes
 
-Check out a few resources that may come in handy when working with NestJS:
+Se mantienen las declaraciones `pg_data:` y `redis_data:`, los montajes de datos, PostgreSQL 15, Redis 7 y la red `secure_mail_network`. No se añade `name:` ni `external:` a los volúmenes.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Compose prefija los nombres físicos con el nombre del proyecto. Por ejemplo, para el proyecto `mailer-service`, siguen siendo `mailer-service_pg_data` y `mailer-service_redis_data`. Conservar las claves del YAML **y el mismo nombre de proyecto** permite reutilizarlos. [Documentación de Docker](https://docs.docker.com/compose/how-tos/project-name/).
 
-## Support
+Antes de actualizar, identificar el proyecto y los volúmenes del servidor:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+docker compose ls
+docker volume ls --filter label=com.docker.compose.volume=pg_data
+docker volume ls --filter label=com.docker.compose.volume=redis_data
+```
 
-## Stay in touch
+1. Conservar el directorio de despliegue. Si antes se usaba `-p` o `COMPOSE_PROJECT_NAME`, copiar exactamente ese nombre a `COMPOSE_PROJECT_NAME` en `.env.production`. No añadir un sufijo `-prod` al nombre existente.
+2. Copiar a `.env.production` los valores de producción anteriores, incluidos `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, SMTP y claves de API. Cambiar las variables de PostgreSQL no cambia usuarios ni contraseñas de una base ya inicializada.
+3. Revisar los nombres resueltos antes de arrancar. Este comando solo muestra nombres de volúmenes, sin credenciales:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.production.yml config --format json | python3 -c 'import json,sys; c=json.load(sys.stdin); print("Proyecto:", c["name"]); [print(k, "->", v["name"]) for k,v in c["volumes"].items()]'
+   ```
 
-## License
+4. Ejecutar los comandos de producción indicados arriba. Se conservan los nombres de servicio `app-prod`, `postgres` y `redis`, por lo que Compose puede actualizar el despliegue existente.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+No ejecutar `down -v` ni eliminar los volúmenes para actualizar. Si el despliegue anterior ejecutaba `app-dev` con el mismo proyecto, detener ese servicio antes de arrancar producción para evitar dos consumidores con configuraciones distintas sobre la misma base y cola.
+
+En producción `synchronize` está desactivado: este procedimiento supone que la base existente ya contiene el esquema. Una instalación sobre una base vacía requiere provisionar el esquema antes de iniciar la aplicación.
+
+## Comprobaciones locales
+
+```bash
+npm ci
+npm run build
+npm test -- --runInBand
+```
+
+Para verificar únicamente la imagen, sin arrancar servicios:
+
+```bash
+docker build --target production -t secure-mailer-service:check .
+```

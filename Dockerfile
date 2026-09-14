@@ -31,9 +31,8 @@ ENV NODE_ENV=development
 # Copy dependency manifests first (cache optimization)
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies)
-# Using npm install for development to ensure all dependencies are properly installed
-RUN npm install --loglevel=error && \
+# Install dependencies reproducibly from the lockfile
+RUN npm ci --include=dev --loglevel=error && \
     npm cache clean --force
 
 # Copy application source code
@@ -58,7 +57,7 @@ COPY package*.json ./
 
 # Install all dependencies (needed for build)
 # Usando npm ci para build reproducible
-RUN npm ci --loglevel=error
+RUN npm ci --include=dev --loglevel=error
 
 # Copy application source
 COPY . .
@@ -67,7 +66,7 @@ COPY . .
 RUN npm run build
 
 # Remove devDependencies - npm prune elimina dev deps
-RUN npm prune --production && \
+RUN npm prune --omit=dev && \
     npm cache clean --force
 
 # ============================================
@@ -83,7 +82,7 @@ WORKDIR /usr/src/app
 
 # Set production environment
 ENV NODE_ENV=production \
-    NODE_OPTIONS="--max-old-space-size=2048"
+    NODE_OPTIONS="--max-old-space-size=384"
 
 # Install dumb-init only
 RUN apt-get update && \
@@ -94,13 +93,14 @@ RUN apt-get update && \
 COPY --from=builder --chown=node:node /usr/src/app/dist ./dist
 COPY --from=builder --chown=node:node /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /usr/src/app/package*.json ./
+COPY --from=builder --chown=node:node /usr/src/app/templates ./templates
 
 # Security: Switch to non-privileged user
 USER node
 
-# Health check (adjust endpoint as needed)
+# Liveness check against the application's existing public endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD node -e "require('http').get({host:'127.0.0.1',port:process.env.PORT || 3000,path:'/',timeout:5000}, (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1)).on('timeout', () => process.exit(1))"
 
 # Expose application port
 EXPOSE 3000

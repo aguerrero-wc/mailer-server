@@ -1,0 +1,10 @@
+.git
+node_modules
+dist
+coverage
+.env
+.env.*
+logs
+*.log
+.DS_Store
+.codex
