@@ -1,0 +1,299 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-09-15T00:00:00.000Z",
+  "__export_source": "mailer-service",
+  "resources": [
+    {
+      "_id": "__WORKSPACE_ID__",
+      "parentId": null,
+      "name": "Mailer Service",
+      "description": "Todos los endpoints implementados, con ejemplos de las cuatro plantillas de correo. Seleccionar dev o prod y configurar base_url, email y api_key. Consultar INSOMNIA.md en la raíz del proyecto.",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "__BASE_ENVIRONMENT_ID__",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:3001",
+        "email": "pruebas@example.com",
+        "api_key": "",
+        "recipient_name": "Usuario de prueba",
+        "institution": "Institución de prueba",
+        "platform_url": "https://example.com",
+        "reset_url": "https://example.com/reset-password?token=token-de-prueba",
+        "instruction_url": "https://example.com/instructivo"
+      },
+      "dataPropertyOrder": null,
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 0,
+      "_type": "environment"
+    },
+    {
+      "_id": "__environment_1__",
+      "parentId": "__BASE_ENVIRONMENT_ID__",
+      "name": "dev",
+      "data": {
+        "base_url": "http://localhost:3001",
+        "email": "pruebas@example.com",
+        "api_key": ""
+      },
+      "dataPropertyOrder": null,
+      "color": "#22c55e",
+      "isPrivate": false,
+      "metaSortKey": 1,
+      "_type": "environment"
+    },
+    {
+      "_id": "__environment_2__",
+      "parentId": "__BASE_ENVIRONMENT_ID__",
+      "name": "prod",
+      "data": {
+        "base_url": "https://url...",
+        "email": "pruebas@example.com",
+        "api_key": ""
+      },
+      "dataPropertyOrder": null,
+      "color": "#ef4444",
+      "isPrivate": false,
+      "metaSortKey": 2,
+      "_type": "environment"
+    },
+    {
+      "_id": "__request_group_1__",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "01 · Servicio",
+      "description": "Comprobación HTTP de NestJS y envío directo de prueba por SMTP.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1,
+      "_type": "request_group"
+    },
+    {
+      "_id": "__request_group_2__",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "02 · Correos con plantilla",
+      "description": "POST /mail/send requiere x-api-key. Cada petición encola un correo y devuelve 202 con jobId; la entrega se procesa después.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2,
+      "_type": "request_group"
+    },
+    {
+      "_id": "__request_group_3__",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "03 · Nginx (prod)",
+      "description": "Solo disponible al acceder mediante el Nginx de docker-compose.production.yml. En dev, /health devuelve 404.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3,
+      "_type": "request_group"
+    },
+    {
+      "_id": "__request_1__",
+      "parentId": "__request_group_1__",
+      "name": "GET / · Estado de NestJS",
+      "description": "Sin autenticación. Respuesta esperada: 200 OK, texto Hello World!. Comprueba que el servidor HTTP responde.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_2__",
+      "parentId": "__request_group_1__",
+      "name": "POST /test/email · Correo de prueba",
+      "description": "Sin autenticación en la implementación actual. Envía un correo directamente por SMTP, sin cola. Respuesta esperada: 201 Created con success: true y message. El destinatario se toma de email en el entorno seleccionado.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/test/email",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"to\": \"{{ _.email }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_3__",
+      "parentId": "__request_group_2__",
+      "name": "POST /mail/send · Bienvenida",
+      "description": "Plantilla welcome. Requiere x-api-key = API_KEY_PRIVATE_ZONES del servidor. Respuesta esperada: 202 Accepted con {\"message\":\"Queued\",\"jobId\":\"...\"}. Confirma que el correo se encoló; la entrega SMTP ocurre después.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/mail/send",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"to\": \"{{ _.email }}\",\n  \"template\": \"welcome\",\n  \"data\": {\n    \"name\": \"{{ _.recipient_name }}\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-api-key",
+          "value": "{{ _.api_key }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_4__",
+      "parentId": "__request_group_2__",
+      "name": "POST /mail/send · Recuperación de contraseña",
+      "description": "Plantilla password_recovery. reset_url es un enlace de ejemplo configurable en Base Environment. Requiere x-api-key. Respuesta esperada: 202 Accepted con message: Queued y jobId.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/mail/send",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"to\": \"{{ _.email }}\",\n  \"template\": \"password_recovery\",\n  \"data\": {\n    \"name\": \"{{ _.recipient_name }}\",\n    \"url\": \"{{ _.reset_url }}\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-api-key",
+          "value": "{{ _.api_key }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_5__",
+      "parentId": "__request_group_2__",
+      "name": "POST /mail/send · Bienvenida a un grupo",
+      "description": "Plantilla group_welcome. addedGroups es un arreglo de nombres de grupos. Las credenciales del cuerpo son ficticias; eliminar credentials para probar el correo sin ese bloque. Requiere x-api-key. Respuesta esperada: 202 Accepted con message: Queued y jobId.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/mail/send",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"to\": \"{{ _.email }}\",\n  \"template\": \"group_welcome\",\n  \"data\": {\n    \"name\": \"{{ _.recipient_name }}\",\n    \"institution\": \"{{ _.institution }}\",\n    \"addedGroups\": [\n      \"Inducción institucional\"\n    ],\n    \"platformUrl\": \"{{ _.platform_url }}\",\n    \"instructionUrl\": \"{{ _.instruction_url }}\",\n    \"supportEmail\": \"{{ _.email }}\",\n    \"dataEmail\": \"{{ _.email }}\",\n    \"siteUrl\": \"{{ _.platform_url }}\",\n    \"credentials\": {\n      \"username\": \"{{ _.email }}\",\n      \"password\": \"Temporal-Solo-Pruebas-123!\"\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-api-key",
+          "value": "{{ _.api_key }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_6__",
+      "parentId": "__request_group_2__",
+      "name": "POST /mail/send · Bienvenida a varios grupos",
+      "description": "Plantilla group_welcome_multiple. Incluye varios nombres en addedGroups. Las credenciales del cuerpo son ficticias; eliminar credentials para probar el correo sin ese bloque. Requiere x-api-key. Respuesta esperada: 202 Accepted con message: Queued y jobId.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/mail/send",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"to\": \"{{ _.email }}\",\n  \"template\": \"group_welcome_multiple\",\n  \"data\": {\n    \"name\": \"{{ _.recipient_name }}\",\n    \"institution\": \"{{ _.institution }}\",\n    \"addedGroups\": [\n      \"Inducción institucional\",\n      \"Seguridad del paciente\",\n      \"Formación continua\"\n    ],\n    \"platformUrl\": \"{{ _.platform_url }}\",\n    \"instructionUrl\": \"{{ _.instruction_url }}\",\n    \"supportEmail\": \"{{ _.email }}\",\n    \"dataEmail\": \"{{ _.email }}\",\n    \"siteUrl\": \"{{ _.platform_url }}\",\n    \"credentials\": {\n      \"username\": \"{{ _.email }}\",\n      \"password\": \"Temporal-Solo-Pruebas-123!\"\n    }\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-api-key",
+          "value": "{{ _.api_key }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "__request_7__",
+      "parentId": "__request_group_3__",
+      "name": "GET /health · Estado de Nginx (solo prod)",
+      "description": "Sin autenticación. Usar prod con la URL real del proxy. Respuesta esperada: 200 OK, texto healthy seguido de un salto de línea. Comprueba Nginx; no comprueba NestJS, Redis, PostgreSQL ni SMTP. En dev, sin Nginx, devuelve 404.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}

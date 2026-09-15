@@ -8,6 +8,11 @@ services:
       target: production
     image: secure-mailer-service:${VERSION:-latest}
     restart: unless-stopped
+    command: >
+      sh -c "
+        npm run migration:run &&
+        exec node dist/main.js
+      "
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +56,11 @@ services:
   nginx:
     image: nginx:1.28-alpine
     restart: unless-stopped
+    environment:
+      # La plantilla contiene la configuración completa, incluidas user, events y http.
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: '^NGINX_TRUSTED_PROXY_CIDR$$'
+      NGINX_TRUSTED_PROXY_CIDR: ${NGINX_TRUSTED_PROXY_CIDR:-127.0.0.1/32}
     depends_on:
       app-prod:
         condition: service_healthy

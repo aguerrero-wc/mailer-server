@@ -38,7 +38,7 @@ Solo Nginx publica un puerto: `0.0.0.0:3001` hacia su puerto interno `80`. `NGIN
 
 El flujo es **cliente → Nginx Proxy Manager (HTTPS) → Nginx (HTTP) → app-prod:3000**. En NPM configurar el Proxy Host con esquema `http`, la IP del servidor Docker como destino y el puerto `3001` (o `NGINX_HTTP_PORT`). Si NPM corre en otro contenedor, `127.0.0.1` apunta al propio contenedor de NPM; usar una dirección del servidor alcanzable desde él. TLS y certificados se gestionan en NPM.
 
-La configuración está en `nginx/nginx.conf`. La imagen oficial la procesa como plantilla al iniciar y sustituye únicamente `NGINX_TRUSTED_PROXY_CIDR`, conservando las variables nativas de Nginx. Incluye gzip, conexiones persistentes, límite de 10 peticiones/s por IP con ráfaga de 20 y respuesta `429`, y `/health` para comprobar Nginx. El límite de cuerpo de 10 MB aplica en Nginx; los límites del parser de Nest siguen aplicando. Docker resuelve `app-prod` periódicamente para seguir funcionando cuando el backend cambia de IP.
+La configuración está en `nginx/nginx.conf`. La imagen oficial la procesa como plantilla al iniciar y sustituye únicamente `NGINX_TRUSTED_PROXY_CIDR`, conservando las variables nativas de Nginx. Compose define `NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx` para generar `/etc/nginx/nginx.conf`: es una configuración completa con `user`, `events` y `http`, por lo que no debe generarse dentro de `conf.d`. Incluye gzip, conexiones persistentes, límite de 10 peticiones/s por IP con ráfaga de 20 y respuesta `429`, y `/health` para comprobar Nginx. El límite de cuerpo de 10 MB aplica en Nginx; los límites del parser de Nest siguen aplicando. Docker resuelve `app-prod` periódicamente para seguir funcionando cuando el backend cambia de IP.
 
 Definir `NGINX_TRUSTED_PROXY_CIDR` en `.env.production` con la IP/CIDR desde la que Nginx ve llegar a NPM. Preferir la IP concreta del proxy. El valor inicial `127.0.0.1/32` solo confía en loopback: hasta configurar NPM, los logs y el rate limit usarán la IP del proxy, y el esquema reenviado será `http`. No copiar `172.20.0.0/16` de otro proyecto sin verificar la red real. Nginx acepta `X-Forwarded-For` y `X-Forwarded-Proto` solo del proxy configurado y envía a Nest la IP validada. [Módulo Real IP de Nginx](https://nginx.org/en/docs/http/ngx_http_realip_module.html).
 
@@ -81,14 +81,40 @@ docker volume ls --filter label=com.docker.compose.volume=redis_data
 
 No ejecutar `down -v` ni eliminar los volúmenes para actualizar. Si el despliegue anterior ejecutaba `app-dev` con el mismo proyecto, detener ese servicio antes de arrancar producción para evitar dos consumidores con configuraciones distintas sobre la misma base y cola.
 
-En producción `synchronize` está desactivado: este procedimiento supone que la base existente ya contiene el esquema. Una instalación sobre una base vacía requiere provisionar el esquema antes de iniciar la aplicación.
+### Migraciones
+
+En producción `synchronize` está desactivado. El comando de `app-prod` ejecuta `npm run migration:run` antes de arrancar Nest; si una migración falla, no inicia la aplicación.
+
+El build compila `src/database/data-source.ts` y `src/database/migrations/*.ts` dentro de `dist/database/`. La imagen final ejecuta el CLI de TypeORM con Node y esos archivos JavaScript, sin necesitar `typescript` ni `ts-node`. El `DataSource` toma las variables `DB_*` que inyecta Compose y registra las entidades explícitamente porque el CLI no carga `AppModule`. [Ejecución de migraciones en TypeORM](https://typeorm.io/docs/migrations/executing/).
+
+La migración inicial crea `templates`, `email_logs` y `security_logs`, sus restricciones y la extensión `uuid-ossp`. Sobre una base vacía se aplica automáticamente al arrancar. TypeORM registra las migraciones aplicadas en `migrations`, por lo que los siguientes arranques no vuelven a crearlas. Después Nest carga las plantillas iniciales mediante el servicio existente.
+
+Para revisar el estado incluso si `app-prod` no consigue arrancar:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml build app-prod
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps app-prod npm run migration:show
+```
+
+Estos comandos `run --no-deps` requieren que PostgreSQL esté arrancado. Si la base ya contiene las tablas creadas previamente con `synchronize`, comprobar primero que el esquema coincide con las entidades:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps app-prod node ./node_modules/typeorm/cli.js schema:log -d dist/database/data-source.js
+```
+
+**Solo si no hay diferencias de esquema y la única migración pendiente es `InitialSchema1789488000000`**, registrar esa migración como aplicada antes de iniciar `app-prod`:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps app-prod npm run migration:run -- --fake
+```
+
+`--fake` registra las migraciones pendientes sin ejecutar su SQL; no usarlo sobre una base vacía ni cuando haya cambios por aplicar. Si `schema:log` muestra diferencias, hay que reconciliar el esquema antes de registrar la migración inicial. [Migraciones ya aplicadas en TypeORM](https://typeorm.io/docs/migrations/faking/).
 
 ## Comprobaciones locales
 
 ```bash
-npm ci
-npm run build
-npm test -- --runInBand
+docker compose --env-file .env -f docker-compose.yml exec app-dev npm run build
+docker compose --env-file .env -f docker-compose.yml exec app-dev npm test -- --runInBand
 ```
 
 Para verificar únicamente la imagen, sin arrancar servicios:
